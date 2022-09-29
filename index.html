@@ -5,16 +5,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>{app title}</title>
-  <link rel="stylesheet" href="../../blockstart.css">
+  <title>Nature classifier by Heloá</title>
 </head>
 
 <body>
   <main>
+    <form id="location-form">
+      <label for="lat">Latitude:</label>
+      <input placeholder="37.865101" type="text" name="lat" id="lat" />
+      <label for="lon">Longitude:</label>
+      <input placeholder="-119.538330" type="text" name="lon" id="lon" />
+      <button type="submit">Search</button>
+    </form>
+    <hr />
     <input id="photo" type="file">
     <div id="results"></div>
   </main>
   <script>
+
+    function getQuery(lat, lon) {
+      const apiURL = `https://api.tomtom.com/search/2/poiSearch/`;
+      const keyword = 'national%20park';
+
+      return `${apiURL}/${keyword}.json?limit=1&lat=${lat}&lon=${lon}&view=Unified&relatedPois=off&key=${env.API_KEY}`;
+    }
+
+    document.addEventListener("submit", sendData);
+
+    function sendData(e) {
+      e.preventDefault();
+      const lat = document.querySelector('#lat').value;
+      const lon = document.querySelector('#lon').value;
+
+      geoSearch(lat,lon);
+    }
+
+    async function geoSearch(lat, lon) {
+      const requestURL = getQuery(lat, lon);
+      const response = await fetch(requestURL, { method: 'GET' })
+      const json = await response.json();
+
+      const { poi: { name, categories }, address: { country }, score } = json.results[0];
+
+      return {
+        name,
+        categories,
+        country,
+        score
+      }
+    }
 
     async function loaded(reader) {
       const requestData = JSON.stringify({
@@ -26,8 +65,8 @@
         body: requestData,
         headers: { "Content-Type": "application/json" }
       });
+
       const json = await response.json();
-      console.log('json response:', json)
       const label = json['data'][0]['confidences'][0]['label'];
       results.innerHTML = `<br/><img src="${reader.result}" width="300" /> <p>${label}</p>`
     }
@@ -36,7 +75,6 @@
       const reader = new FileReader();
       reader.addEventListener('load', () => loaded(reader))
       reader.readAsDataURL(photo.files[0]);
-      console.log('photo content:', photo)
     }
     photo.addEventListener('input', read);
 
